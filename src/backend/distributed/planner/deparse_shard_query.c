@@ -280,6 +280,9 @@ UpdateRelationToShardNames(Node *node, List *relationShardList)
 }
 
 
+#include "utils/syscache.h"
+#include "catalog/pg_constraint.h"
+
 /*
  * UpdateRelationsToLocalShardTables walks over the query tree and appends shard ids to
  * relations. The caller is responsible for ensuring that the resulting Query can
@@ -298,6 +301,67 @@ UpdateRelationsToLocalShardTables(Node *node, List *relationShardList)
 	{
 		return query_tree_walker((Query *) node, UpdateRelationsToLocalShardTables,
 								 relationShardList, QTW_EXAMINE_RTES_BEFORE);
+	}
+
+	if (IsA(node, OnConflictExpr))
+	{
+		OnConflictExpr *onConflict = (OnConflictExpr *) node;
+		Oid constraintId = onConflict->constraint;
+
+		if (constraintId != InvalidOid)
+		{
+			Oid constraintRelationId = InvalidOid;
+
+			HeapTuple tp = SearchSysCache1(CONSTROID, ObjectIdGetDatum(constraintId));
+			if (HeapTupleIsValid(tp))
+			{
+				Form_pg_constraint contup = (Form_pg_constraint) GETSTRUCT(tp);
+
+				constraintRelationId = contup->conrelid;
+				ReleaseSysCache(tp);
+			}
+
+			if (constraintRelationId == InvalidOid)
+			{
+				return false;
+			}
+
+			ListCell *relationShardCell = NULL;
+			RelationShard *relationShard = NULL;
+
+			foreach(relationShardCell, relationShardList)
+			{
+				relationShard = (RelationShard *) lfirst(relationShardCell);
+
+				if (constraintRelationId == relationShard->relationId)
+				{
+					break;
+				}
+
+				relationShard = NULL;
+			}
+
+
+			if (relationShard != NULL)
+			{
+				char *constraintName = get_constraint_name(constraintId);
+
+				AppendShardIdToName(&constraintName, relationShard->shardId);
+
+
+				Oid shardOid = GetTableLocalShardOid(relationShard->relationId,
+													 relationShard->shardId);
+
+				Oid shardConstraintRelationId = get_relation_constraint_oid(shardOid,
+																			constraintName,
+																			false);
+
+				onConflict->constraint = shardConstraintRelationId;
+
+
+				return false;
+			}
+		}
 	}
 
 	if (!IsA(node, RangeTblEntry))
