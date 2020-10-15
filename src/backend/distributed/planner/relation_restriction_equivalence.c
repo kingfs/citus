@@ -2049,6 +2049,15 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 			continue;
 		}
 
+		RelOptInfo *inputJoinRestrictInnerRel = joinRestrictionInput->innerrel;
+		RelOptInfo *inputJoinRestrictOuterRel = joinRestrictionInput->outerrel;
+		RelOptInfo *innerRel = joinRestriction->innerrel;
+		RelOptInfo *outerRel = joinRestriction->outerrel;
+		if (!(innerRel == inputJoinRestrictInnerRel && outerRel == inputJoinRestrictOuterRel))
+		{
+			continue;
+		}
+
 		/*
 		 * We check whether the restrictions in joinRestriction is a super set
 		 * of the restrictions in joinRestrictionInput in the sense that all the
