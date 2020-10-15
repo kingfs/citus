@@ -2117,7 +2117,6 @@ RteIdentityListFor(PlannerInfo *plannerInfo,
 	while ((relationId = bms_next_member(relids, relationId)) >= 0)
 	{
 		RangeTblEntry *rangeTableEntry = plannerInfo->simple_rte_array[relationId];
-		StringInfo str = makeStringInfo();
 		Oid relId;
 		List *rel = RteIdentitiesForRteEntry((Node *) rangeTableEntry);
 		foreach_oid(relId, rel)
@@ -2135,7 +2134,6 @@ RteIdentitiesForRteEntry(Node *query)
 {
 	List *rangeTableList = NIL;
 	List *rteIdentityList = NIL;
-	ListCell *tableEntryCell = NULL;
 
 	ExtractRangeTableRelationWalker((Node *) query, &rangeTableList);
 
