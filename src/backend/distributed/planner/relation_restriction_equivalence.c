@@ -2029,17 +2029,11 @@ RemoveDuplicateJoinRestrictions(JoinRestrictionContext *joinRestrictionContext)
 static bool
 JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 								   JoinRestrictionContext *joinRestrictionContext)
-{
+{	
+	JoinRestriction *joinRestriction = NULL;
 	List *joinRestrictionList = joinRestrictionContext->joinRestrictionList;
-	List *inputJoinRestrictInfoList = joinRestrictionInput->joinRestrictInfoList;
-
-	ListCell *joinRestrictionCell = NULL;
-
-	foreach(joinRestrictionCell, joinRestrictionList)
+	foreach_ptr(joinRestriction, joinRestrictionList)
 	{
-		JoinRestriction *joinRestriction = lfirst(joinRestrictionCell);
-		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;
-
 		/* obviously we shouldn't treat different join types as being the same */
 		if (joinRestriction->joinType != joinRestrictionInput->joinType)
 		{
@@ -2064,7 +2058,9 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 		 * cells in joinRestrictInfoList that are not in inputJoinRestrictInfoList.
 		 * Finally, each element in these lists is a pointer to RestrictInfo
 		 * structure, where equal() function is implemented for the struct.
-		 */
+		 */		 
+		List *inputJoinRestrictInfoList = joinRestrictionInput->joinRestrictInfoList;
+		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;		
 		if (list_difference(joinRestrictInfoList, inputJoinRestrictInfoList) == NIL)
 		{
 			return true;
