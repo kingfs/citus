@@ -2029,7 +2029,7 @@ RemoveDuplicateJoinRestrictions(JoinRestrictionContext *joinRestrictionContext)
 static bool
 JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 								   JoinRestrictionContext *joinRestrictionContext)
-{	
+{
 	JoinRestriction *joinRestriction = NULL;
 	List *joinRestrictionList = joinRestrictionContext->joinRestrictionList;
 	foreach_ptr(joinRestriction, joinRestrictionList)
@@ -2053,7 +2053,8 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 		RelOptInfo *inputJoinRestrictOuterRel = joinRestrictionInput->outerrel;
 		RelOptInfo *innerRel = joinRestriction->innerrel;
 		RelOptInfo *outerRel = joinRestriction->outerrel;
-		if (!(innerRel == inputJoinRestrictInnerRel && outerRel == inputJoinRestrictOuterRel))
+		if (!(innerRel == inputJoinRestrictInnerRel &&
+			  outerRel == inputJoinRestrictOuterRel))
 		{
 			continue;
 		}
@@ -2064,7 +2065,7 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 		 * restrictions in the latter already exists in the former.
 		 */
 		List *inputJoinRestrictInfoList = joinRestrictionInput->joinRestrictInfoList;
-		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;		
+		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;
 		if (list_difference(inputJoinRestrictInfoList, joinRestrictInfoList) == NIL)
 		{
 			return true;
