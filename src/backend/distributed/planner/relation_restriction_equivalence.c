@@ -2053,15 +2053,10 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 		 * We check whether the restrictions in joinRestriction is a super set
 		 * of the restrictions in joinRestrictionInput in the sense that all the
 		 * restrictions in the latter already exists in the former.
-		 *
-		 * Also, note that list_difference() returns a list that contains all the
-		 * cells in joinRestrictInfoList that are not in inputJoinRestrictInfoList.
-		 * Finally, each element in these lists is a pointer to RestrictInfo
-		 * structure, where equal() function is implemented for the struct.
-		 */		 
+		 */
 		List *inputJoinRestrictInfoList = joinRestrictionInput->joinRestrictInfoList;
 		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;		
-		if (list_difference(joinRestrictInfoList, inputJoinRestrictInfoList) == NIL)
+		if (list_difference(inputJoinRestrictInfoList, joinRestrictInfoList) == NIL)
 		{
 			return true;
 		}
