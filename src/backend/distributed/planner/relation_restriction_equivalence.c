@@ -2022,6 +2022,9 @@ RemoveDuplicateJoinRestrictions(JoinRestrictionContext *joinRestrictionContext)
 }
 
 
+static List * RteIdentityListFor(PlannerInfo *plannerInfo,
+								 Relids relids);
+
 /*
  * JoinRestrictionListExistsInContext returns true if the given joinRestrictionInput
  * has an equivalent of in the given joinRestrictionContext.
@@ -2050,19 +2053,46 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 		}
 
 		RelOptInfo *inputJoinRestrictInnerRel = joinRestrictionInput->innerrel;
-		RelOptInfo *inputJoinRestrictOuterRel = joinRestrictionInput->outerrel;
 		RelOptInfo *innerRel = joinRestriction->innerrel;
-		RelOptInfo *outerRel = joinRestriction->outerrel;
-		if (!(innerRel == inputJoinRestrictInnerRel &&
-			  outerRel == inputJoinRestrictOuterRel))
+		if (innerRel->reloptkind != inputJoinRestrictInnerRel->reloptkind)
 		{
 			continue;
+		}
+
+		{
+			List *l1 = RteIdentityListFor(joinRestriction->plannerInfo, innerRel->relids);
+			List *l2 = RteIdentityListFor(joinRestriction->plannerInfo,
+										  inputJoinRestrictInnerRel->relids);
+
+			if (list_difference_int(l1, l2) != NIL)
+			{
+				continue;
+			}
+		}
+
+
+		RelOptInfo *outerRel = joinRestriction->outerrel;
+		RelOptInfo *inputJoinRestrictOuterRel = joinRestrictionInput->outerrel;
+		if (outerRel->reloptkind != inputJoinRestrictOuterRel->reloptkind)
+		{
+			continue;
+		}
+
+		{
+			List *l1 = RteIdentityListFor(joinRestriction->plannerInfo, outerRel->relids);
+			List *l2 = RteIdentityListFor(joinRestriction->plannerInfo,
+										  inputJoinRestrictOuterRel->relids);
+
+			if (list_difference_int(l1, l2) != NIL)
+			{
+				continue;
+			}
 		}
 
 		/*
 		 * We check whether the restrictions in joinRestriction is a super set
 		 * of the restrictions in joinRestrictionInput in the sense that all the
-		 * restrictions in the latter already exists in the former.
+		 * restrictions in rthe latter already exists in the former.
 		 */
 		List *inputJoinRestrictInfoList = joinRestrictionInput->joinRestrictInfoList;
 		List *joinRestrictInfoList = joinRestriction->joinRestrictInfoList;
@@ -2073,4 +2103,56 @@ JoinRestrictionListExistsInContext(JoinRestriction *joinRestrictionInput,
 	}
 
 	return false;
+}
+
+
+static List * RteIdentitiesForRteEntry(Node *query);
+#include "utils/lsyscache.h"
+static List *
+RteIdentityListFor(PlannerInfo *plannerInfo,
+				   Relids relids)
+{
+	int relationId = -1;
+	List *rteIdentities = NIL;
+	while ((relationId = bms_next_member(relids, relationId)) >= 0)
+	{
+		RangeTblEntry *rangeTableEntry = plannerInfo->simple_rte_array[relationId];
+		StringInfo str = makeStringInfo();
+		Oid relId;
+		List *rel = RteIdentitiesForRteEntry((Node *) rangeTableEntry);
+		foreach_oid(relId, rel)
+		{
+			rteIdentities = list_append_unique_int(rteIdentities, relId);
+		}
+	}
+
+	return rteIdentities;
+}
+
+
+static List *
+RteIdentitiesForRteEntry(Node *query)
+{
+	List *rangeTableList = NIL;
+	List *rteIdentityList = NIL;
+	ListCell *tableEntryCell = NULL;
+
+	ExtractRangeTableRelationWalker((Node *) query, &rangeTableList);
+
+	ListCell *rangeTableCell = NULL;
+
+	foreach(rangeTableCell, rangeTableList)
+	{
+		RangeTblEntry *rangeTableEntry = (RangeTblEntry *) lfirst(rangeTableCell);
+
+		if (rangeTableEntry->rtekind == RTE_RELATION)
+		{
+			int rteIdentity = GetRTEIdentity(rangeTableEntry);
+
+			rteIdentityList = lappend_int(rteIdentityList, rteIdentity);
+		}
+	}
+
+
+	return rteIdentityList;
 }
