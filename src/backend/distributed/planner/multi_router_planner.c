@@ -2101,6 +2101,16 @@ SelectsFromDistributedTable(List *rangeTableList, Query *query)
 			continue;
 		}
 
+		if (rangeTableEntry->relkind == RELKIND_VIEW ||
+			rangeTableEntry->relkind == RELKIND_MATVIEW)
+		{
+			/*
+			 * Views are not distributed tables, but we don't care about them
+			 * in this context.
+			 */
+			continue;
+		}
+
 		CitusTableCacheEntry *cacheEntry = GetCitusTableCacheEntry(
 			rangeTableEntry->relid);
 		if (IsCitusTableTypeCacheEntry(cacheEntry, DISTRIBUTED_TABLE) &&
