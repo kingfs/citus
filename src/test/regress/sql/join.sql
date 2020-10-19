@@ -180,6 +180,13 @@ SELECT * FROM abcd first join abcd second USING(b) join abcd third on first.b=th
 END;
 
 
+-- test join with geqo
+CREATE TABLE dist (a int, b int);
+SELECT create_distributed_table('dist', 'a');
+INSERT INTO dist VALUES (1, 1), (2, 2), (3, 3);
 
+SET geqo_threshold to 2;
+
+SELECT count(*) FROM dist d1 LEFT JOIN dist d2 ON d1.a = d2.a LEFT JOIN dist d3 ON d3.a = d2.a;
 
 DROP SCHEMA join_schema CASCADE;
