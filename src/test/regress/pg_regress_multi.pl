@@ -419,6 +419,9 @@ push(@pgOptions, "wal_level='logical'");
 
 # Citus options set for the tests
 push(@pgOptions, "citus.shard_count=4");
+push(@pgOptions, "geqo_threshold=2");
+push(@pgOptions, "geqo_generations=1000");
+push(@pgOptions, "geqo_pool_size=1000");
 push(@pgOptions, "citus.shard_max_size=1500kB");
 push(@pgOptions, "citus.repartition_join_bucket_count_per_node=2");
 push(@pgOptions, "citus.sort_returning='on'");
