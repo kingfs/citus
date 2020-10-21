@@ -426,6 +426,10 @@ push(@pgOptions, "citus.shard_replication_factor=2");
 push(@pgOptions, "citus.node_connection_timeout=${connectionTimeout}");
 push(@pgOptions, "citus.explain_analyze_sort_method='taskId'");
 
+push(@pgOptions, "geqo_threshold=2");
+push(@pgOptions, "geqo_pool_size=1000");
+push(@pgOptions, "geqo_generations=1000");
+
 # we disable slow start by default to encourage parallelism within tests
 push(@pgOptions, "citus.executor_slow_start_interval=0ms");
 
