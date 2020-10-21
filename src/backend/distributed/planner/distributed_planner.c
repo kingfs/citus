@@ -1711,21 +1711,22 @@ multi_join_restriction_hook(PlannerInfo *root,
 	MemoryContext restrictionsMemoryContext = plannerRestrictionContext->memoryContext;
 	MemoryContext oldMemoryContext = MemoryContextSwitchTo(restrictionsMemoryContext);
 
+	JoinRestrictionContext *joinRestrictionContext =
+		plannerRestrictionContext->joinRestrictionContext;
+	Assert(joinRestrictionContext != NULL);
+
+	Assert(!bms_is_empty(innerrel->relids) && !bms_is_empty(outerrel->relids));
+
+	JoinRestriction *joinRestriction = palloc0(sizeof(JoinRestriction));
+	joinRestriction->joinType = jointype;
+	joinRestriction->plannerInfo = root;
+
 	/*
 	 * We create a copy of restrictInfoList because it may be created in a memory
 	 * context which will be deleted when we still need it, thus we create a copy
 	 * of it in our memory context.
 	 */
-	List *restrictInfoList = copyObject(extra->restrictlist);
-
-	JoinRestrictionContext *joinRestrictionContext =
-		plannerRestrictionContext->joinRestrictionContext;
-	Assert(joinRestrictionContext != NULL);
-
-	JoinRestriction *joinRestriction = palloc0(sizeof(JoinRestriction));
-	joinRestriction->joinType = jointype;
-	joinRestriction->joinRestrictInfoList = restrictInfoList;
-	joinRestriction->plannerInfo = root;
+	joinRestriction->joinRestrictInfoList = copyObject(extra->restrictlist);
 	joinRestriction->innerrelRelids = bms_copy(innerrel->relids);
 	joinRestriction->outerrelRelids = bms_copy(outerrel->relids);
 
