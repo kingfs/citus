@@ -63,6 +63,8 @@ typedef struct BackendManagementShmemData
 	 */
 	pg_atomic_uint64 nextTransactionNumber;
 
+	pg_atomic_uint32 totalBackendCount;
+
 	BackendData backends[FLEXIBLE_ARRAY_MEMBER];
 } BackendManagementShmemData;
 
@@ -495,6 +497,7 @@ BackendManagementShmemInit(void)
 
 		/* start the distributed transaction ids from 1 */
 		pg_atomic_init_u64(&backendManagementShmemData->nextTransactionNumber, 1);
+		pg_atomic_init_u32(&backendManagementShmemData->totalBackendCount, 0);
 
 		/*
 		 * We need to init per backend's spinlock before any backend
@@ -714,6 +717,63 @@ GetCurrentDistributedTransactionId(void)
 		backendData.transactionId.timestamp;
 
 	return currentDistributedTransactionId;
+}
+
+
+void
+MarkBackendDeactive(void)
+{
+	bool authenticated = false;
+	SpinLockAcquire(&MyBackendData->mutex);
+
+	authenticated = MyBackendData->authenticated;
+
+	SpinLockRelease(&MyBackendData->mutex);
+
+	if (authenticated)
+	{
+		pg_atomic_sub_fetch_u32(&backendManagementShmemData->totalBackendCount, 1);
+
+		SpinLockAcquire(&MyBackendData->mutex);
+
+		MyBackendData->authenticated = false;
+
+		SpinLockRelease(&MyBackendData->mutex);
+
+		elog(WARNING,"deacreased to: %d",pg_atomic_add_fetch_u32(&backendManagementShmemData->totalBackendCount, 0));
+
+	}
+	elog(WARNING,"deacreased2 to: %d",pg_atomic_add_fetch_u32(&backendManagementShmemData->totalBackendCount, 0));
+
+}
+
+void
+MarkBackendActive(void)
+{
+	bool authenticated = false;
+	if  (MyBackendData == NULL)
+	{
+		InitializeBackendData();
+
+		//return;
+	}
+	SpinLockAcquire(&MyBackendData->mutex);
+
+		authenticated = MyBackendData->authenticated;
+
+	SpinLockRelease(&MyBackendData->mutex);
+
+	if (!authenticated)
+	{
+		pg_atomic_add_fetch_u32(&backendManagementShmemData->totalBackendCount, 1);
+
+		elog(WARNING,"increased to: %d",pg_atomic_add_fetch_u32(&backendManagementShmemData->totalBackendCount, 0));
+		SpinLockAcquire(&MyBackendData->mutex);
+
+		MyBackendData->authenticated = true;
+
+		SpinLockRelease(&MyBackendData->mutex);
+	}
 }
 
 

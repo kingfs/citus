@@ -199,6 +199,21 @@ static const struct config_enum_entry explain_analyze_sort_method_options[] = {
 
 /* *INDENT-ON* */
 
+#include "libpq/auth.h"
+
+static ClientAuthentication_hook_type original_client_auth_hook = NULL;
+static void
+CitusAuthHook(Port *p, int status);
+
+static void
+CitusAuthHook(Port *port, int status)
+{
+	if (original_client_auth_hook)
+		original_client_auth_hook(port, status);
+
+	MarkBackendActive();
+
+}
 
 /* shared library initialization function */
 void
@@ -279,10 +294,10 @@ _PG_init(void)
 	ExecutorStart_hook = CitusExecutorStart;
 	ExecutorRun_hook = CitusExecutorRun;
 	ExplainOneQuery_hook = CitusExplainOneQuery;
-
 	/* register hook for error messages */
 	emit_log_hook = multi_log_hook;
-
+	original_client_auth_hook = ClientAuthentication_hook;
+	ClientAuthentication_hook = CitusAuthHook;
 	InitializeMaintenanceDaemon();
 
 	/* initialize coordinated transaction management */
@@ -311,6 +326,8 @@ _PG_init(void)
 	{
 		DoInitialCleanup();
 	}
+	else
+		elog(WARNING, "we are here %d", MyProcPid);
 }
 
 
@@ -451,6 +468,8 @@ CitusCleanupConnectionsAtExit(int code, Datum arg)
 	 * are already given away.
 	 */
 	DeallocateReservedConnections();
+
+	MarkBackendDeactive();
 }
 
 

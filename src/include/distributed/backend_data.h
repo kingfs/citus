@@ -52,6 +52,7 @@ typedef struct BackendData
 	bool cancelledDueToDeadlock;
 	CitusInitiatedBackend citusBackend;
 	DistributedTransactionId transactionId;
+	bool authenticated;
 } BackendData;
 
 
@@ -68,5 +69,9 @@ extern void CancelTransactionDueToDeadlock(PGPROC *proc);
 extern bool MyBackendGotCancelledDueToDeadlock(bool clearState);
 extern List * ActiveDistributedTransactionNumbers(void);
 LocalTransactionId GetMyProcLocalTransactionId(void);
+
+extern void MarkBackendActive(void);
+extern void MarkBackendDeactive(void);
+
 
 #endif /* BACKEND_DATA_H */
